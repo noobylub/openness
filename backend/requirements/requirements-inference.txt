@@ -1,0 +1,9 @@
+# PyTorch is supplied by the pinned CUDA/PyTorch image.
+transformers>=4.46.0,<4.55.0
+accelerate>=0.34.0
+huggingface-hub>=0.25.0
+hf-transfer>=0.1.6
+safetensors>=0.4.5
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+pydantic>=2.9.0,<3.0.0
