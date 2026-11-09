@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AudioLines, FlaskConical, MessageCircle } from "lucide-react";
+import {
+  ArrowUpRight,
+  AudioLines,
+  ChevronDown,
+  FlaskConical,
+  MessageCircle,
+} from "lucide-react";
 
 export function StudioHeader() {
   const path = usePathname();
@@ -32,10 +38,30 @@ export function StudioHeader() {
           Extraction
         </Link>
       </nav>
-      <span className="header-caption">
-        LANGUAGE, IN A NEW DIRECTION
-        <span className="caption-dot" />
-      </span>
+      <details className="source-menu">
+        <summary>
+          Source
+          <ChevronDown size={14} />
+        </summary>
+        <div className="source-menu-items">
+          <a
+            href="https://github.com/noobylub/openness/tree/master"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Frontend
+            <ArrowUpRight size={14} />
+          </a>
+          <a
+            href="https://github.com/noobylub/touch-grass/blob/main/README.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Backend
+            <ArrowUpRight size={14} />
+          </a>
+        </div>
+      </details>
     </header>
   );
 }
