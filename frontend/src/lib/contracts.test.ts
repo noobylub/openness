@@ -9,6 +9,13 @@ import {
 
 const vector = { vector_id: "a".repeat(64), coefficient: 1, layer: 10 };
 describe("request contracts", () => {
+  it.each([{}, { vectors: [] }])("accepts chat without vectors: %j", (selection) => {
+    const parsed = chatInput.parse({
+      messages: [{ role: "user", content: "Hello" }],
+      ...selection,
+    });
+    expect(parsed.vectors).toEqual([]);
+  });
   it("accepts longer messages and the full output allowance", () => {
     expect(chatInput.safeParse({
       messages: [{ role: "user", content: "x".repeat(24_000) }],

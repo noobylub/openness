@@ -20,6 +20,35 @@ beforeEach(() => {
 });
 
 describe("chat route", () => {
+  it.each([
+    [false, {}],
+    [false, { vectors: [] }],
+    [true, {}],
+    [true, { vectors: [] }],
+  ])("generates without vectors with supportsMessages=%s and selection=%j", async (supportsMessages, selection) => {
+    api.config.supportsMessages = supportsMessages;
+    const request = vi.spyOn(api, "connectHTTP").mockResolvedValue(reply);
+    const { vectors: _vectors, ...unsteered } = input();
+
+    const response = await POST(event("/api/chat", "POST", { ...unsteered, ...selection }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ content: "Answer", model: "model" });
+    expect(request).toHaveBeenCalledExactlyOnceWith(
+      "INFERENCE",
+      "/steer",
+      "POST",
+      expect.objectContaining({
+        vectors: [],
+        max_tokens: 128,
+        ...(supportsMessages
+          ? { messages: unsteered.messages }
+          : { prompt: expect.stringContaining("--- USER ---\nNext") }),
+      }),
+      expect.any(AbortSignal),
+    );
+  });
+
   it.each([false, true])("preserves every vector coefficient with supportsMessages=%s", async (supportsMessages) => {
     api.config.supportsMessages = supportsMessages;
     const vectors = [
@@ -109,7 +138,8 @@ describe("chat route", () => {
       "blank content",
       { ...input(), messages: [{ role: "user", content: " " }] },
     ],
-    ["unsteered chat", { ...input(), vectors: [] }],
+    ["null vectors", { ...input(), vectors: null }],
+    ["non-array vectors", { ...input(), vectors: {} }],
     [
       "too many vectors",
       { ...input(), vectors: Array(17).fill(input().vectors[0]) },

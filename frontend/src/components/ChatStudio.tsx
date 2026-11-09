@@ -722,6 +722,13 @@ export function ChatStudio() {
               )}
             </div>
           )}
+          {!active.length && (
+            <p className="warning" role="status">
+              No steering vector is active, so this response will be unsteered.
+              For stronger steering, select a vector and set its coefficient
+              above 1.
+            </p>
+          )}
           <form
             className="composer"
             onSubmit={(event) => {
@@ -779,9 +786,7 @@ export function ChatStudio() {
                   type="submit"
                   className="send-button"
                   title="Send message"
-                  disabled={
-                    busy || !draft.trim() || !active.length || !!invalid
-                  }
+                  disabled={busy || !draft.trim() || !!invalid}
                 >
                   <ArrowUp size={21} />
                 </button>
@@ -790,9 +795,7 @@ export function ChatStudio() {
           </form>
           <div className="composer-foot">
             <span>
-              {!active.length
-                ? "Select a vector to begin."
-                : "A direction, not a guarantee. Verify important outputs."}
+              A direction, not a guarantee. Verify important outputs.
             </span>
             <span>PRIVATE LOCAL HISTORY</span>
           </div>

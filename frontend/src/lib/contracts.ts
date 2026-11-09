@@ -24,7 +24,7 @@ export const chatInput = z
       }))
       .min(1)
       .max(CHAT_MESSAGE_COUNT_LIMIT),
-    vectors: z.array(steeringVector).min(1).max(16),
+    vectors: z.array(steeringVector).max(16).default([]),
     max_tokens: z.number().int().min(1).max(CHAT_OUTPUT_LIMIT).default(128),
   })
   .refine(

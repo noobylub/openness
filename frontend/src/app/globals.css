@@ -790,6 +790,15 @@ summary::-webkit-details-marker {
   padding: 8px;
   margin-top: 12px;
 }
+.warning {
+  padding: 11px 14px;
+  background: #3fc1c91c;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: 5px;
+  margin: 0 0 12px;
+}
 .notice {
   padding: 11px 14px;
   background: #3fc1c91c;
