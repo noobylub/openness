@@ -545,6 +545,28 @@ summary::-webkit-details-marker {
   font-weight: 600;
   color: var(--muted);
 }
+.welcome-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.intro-reopen {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  background: #fff9;
+  color: var(--navy);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.intro-reopen:hover,
+.intro-extraction-link:hover {
+  color: #17696e;
+}
 .little-star {
   font-size: 33px;
   color: var(--pink);
@@ -564,6 +586,85 @@ summary::-webkit-details-marker {
 }
 .welcome h1 .italic-word {
   color: var(--navy);
+}
+.welcome-intro {
+  max-width: 680px;
+  margin: -4px 0 22px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.activation-intro-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 32px));
+  margin: auto;
+  padding: clamp(22px, 5vw, 38px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 20px 70px #15223840;
+}
+.activation-intro-dialog::backdrop {
+  background: #293d5380;
+  backdrop-filter: blur(3px);
+}
+.intro-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.activation-intro h1 {
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.15;
+  margin: 18px 0 14px;
+  margin-bottom: 14px;
+}
+.intro-lead {
+  max-width: 700px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.intro-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+.intro-steps article {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff9;
+}
+.intro-steps h2 {
+  margin: 8px 0 6px;
+  font-size: 16px;
+}
+.intro-steps p,
+.intro-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.intro-extraction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  margin-right: 10px;
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 600;
+}
+.intro-note {
+  margin-top: 16px;
+}
+.intro-start {
+  margin-top: 16px;
 }
 .direction-art {
   height: 122px;
@@ -1324,6 +1425,13 @@ summary::-webkit-details-marker {
   .welcome h1 {
     font-size: 40px;
   }
+  .intro-steps {
+    grid-template-columns: 1fr;
+    margin-top: 18px;
+  }
+  .intro-lead {
+    font-size: 13px;
+  }
   .welcome-topline {
     font-size: 8px;
   }
@@ -1414,6 +1522,9 @@ summary::-webkit-details-marker {
     font-size: 36px;
     margin-top: 20px;
     line-height: 1.17;
+  }
+  .intro-start {
+    width: 100%;
   }
   .welcome-topline {
     font-size: 8px;

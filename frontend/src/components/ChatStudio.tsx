@@ -47,6 +47,7 @@ export function ChatStudio() {
   const [error, setError] = useState("");
   const [catalogError, setCatalogError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showIntro, setShowIntro] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<Conversation[]>([]);
@@ -57,6 +58,7 @@ export function ChatStudio() {
   const conversationId = useRef("");
   const threadEnd = useRef<HTMLDivElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
+  const introDialog = useRef<HTMLDialogElement>(null);
   const active = selections.filter((item) => item.enabled);
   const conflicts =
     new Set(active.map((item) => item.layer)).size !== active.length;
@@ -123,6 +125,25 @@ export function ChatStudio() {
     return () => clearInterval(timer);
   }, [loading]);
   useEffect(() => {
+    try {
+      if (
+        window.localStorage.getItem("larasati-activation-steering-intro") !==
+        "dismissed"
+      )
+        setShowIntro(true);
+    } catch {
+      setNotice(
+        "This browser could not load your saved introduction preference.",
+      );
+      setShowIntro(true);
+    }
+  }, []);
+  useEffect(() => {
+    const dialog = introDialog.current;
+    if (showIntro && dialog && !dialog.open) dialog.showModal();
+    else if (!showIntro && dialog?.open) dialog.close();
+  }, [showIntro]);
+  useEffect(() => {
     void refresh();
     void loadHistory()
       .then(setHistory)
@@ -132,6 +153,19 @@ export function ChatStudio() {
         ),
       );
   }, []);
+
+  function dismissIntro() {
+    setShowIntro(false);
+    try {
+      window.localStorage.setItem(
+        "larasati-activation-steering-intro",
+        "dismissed",
+      );
+    } catch {
+      setNotice("This browser could not save your introduction preference.");
+    }
+  }
+
   useEffect(() => {
     threadEnd.current?.scrollIntoView({ behavior: "instant", block: "end" });
   }, [messages, busy]);
@@ -621,16 +655,31 @@ export function ChatStudio() {
         <div className="thread" aria-busy={busy}>
           {!messages.length ? (
             <div className="welcome">
-              <div className="welcome-topline">
-                <span className="little-star">✳</span>
-                <span>A LITTLE SHIFT. A DIFFERENT POSSIBILITY.</span>
+              <div className="welcome-toolbar">
+                <div className="welcome-topline">
+                  <span className="little-star" aria-hidden="true">
+                    ✳
+                  </span>
+                  <span>A LITTLE SHIFT. A DIFFERENT POSSIBILITY.</span>
+                </div>
+                <button
+                  className="intro-reopen"
+                  onClick={() => setShowIntro(true)}
+                >
+                  About activation steering
+                  <ArrowUpRight size={14} />
+                </button>
               </div>
               <h1>
                 Same model.
                 <br />
                 Different <span className="italic-word">perspective.</span>
               </h1>
-
+              <p className="welcome-intro">
+                Activation steering guides a model’s responses by adjusting
+                its internal activations as it generates text—no retraining
+                required. Choose a vector, tune its strength, and try a prompt.
+              </p>
               <div className="prompt-suggestions">
                 {prompts.map((prompt, index) => (
                   <button key={prompt} onClick={() => setDraft(prompt)}>
@@ -832,6 +881,92 @@ export function ChatStudio() {
             {deleting ? "Deleting..." : "Delete vector"}
           </button>
         </div>
+      </dialog>
+      <dialog
+        ref={introDialog}
+        className="activation-intro-dialog"
+        aria-labelledby="activation-intro-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          dismissIntro();
+        }}
+      >
+        <section className="activation-intro">
+          <div className="intro-dialog-header">
+            <div className="welcome-topline">
+              <span className="little-star" aria-hidden="true">
+                ✳
+              </span>
+              <span>A QUICK INTRODUCTION</span>
+            </div>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Close introduction"
+              onClick={dismissIntro}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <h1 id="activation-intro-title">
+            Steer a response.
+            <br />
+            Keep the <span className="italic-word">same model.</span>
+          </h1>
+          <p className="intro-lead">
+            Activation steering guides a language model’s responses by
+            applying a direction to its internal activations as it generates
+            text. It doesn’t retrain the model or change its weights.
+          </p>
+          <div className="intro-steps">
+            <article>
+              <span className="eyebrow">01 / IN CHAT</span>
+              <h2>Try a steering vector</h2>
+              <p>
+                Choose a vector in the controls, adjust its strength and target
+                layer, then write a prompt. On smaller screens, open the
+                Vector controls panel first.
+              </p>
+            </article>
+            <article>
+              <span className="eyebrow">02 / MAKE YOUR OWN</span>
+              <h2>Set a new direction</h2>
+              <p>
+                In Extraction, add examples to lean into and examples to move
+                away from. Generate a vector, then select it here to steer a
+                conversation.
+              </p>
+              <Link
+                className="intro-extraction-link"
+                href="/extract"
+                onClick={dismissIntro}
+              >
+                Explore Extraction
+                <ArrowUpRight size={15} />
+              </Link>
+            </article>
+          </div>
+          <p className="intro-note">
+            Steering is a nudge, not a guarantee. Outputs can vary; verify
+            important information.
+          </p>
+          <a
+            className="intro-extraction-link"
+            href="https://www.anthropic.com/research/persona-vectors"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Based on Anthropic’s Persona Vectors
+            <ArrowUpRight size={15} />
+          </a>
+          <button
+            className="primary-button intro-start"
+            onClick={dismissIntro}
+          >
+            Start exploring
+            <ArrowUpRight size={16} />
+          </button>
+        </section>
       </dialog>
     </main>
   );
