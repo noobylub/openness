@@ -41,7 +41,8 @@ export function ChatStudio() {
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -80,6 +81,7 @@ export function ChatStudio() {
     try {
       const catalog = await vectors(force);
       setAvailable(catalog);
+      setCatalogLoaded(true);
       if (!force) {
         const ids =
           new URLSearchParams(location.search).get("vectors")?.split(",") || [];
@@ -144,7 +146,6 @@ export function ChatStudio() {
     else if (!showIntro && dialog?.open) dialog.close();
   }, [showIntro]);
   useEffect(() => {
-    void refresh();
     void loadHistory()
       .then(setHistory)
       .catch(() =>
@@ -340,30 +341,47 @@ export function ChatStudio() {
             Vector collection
             <span className="pink-dot" />
           </h2>
-          <button
-            className="icon-button"
-            title="Refresh vectors"
-            disabled={loading}
-            onClick={() => refresh(true)}
-          >
-            <RefreshCw size={16} className={loading ? "spin" : ""} />
-          </button>
+          {catalogLoaded && (
+            <button
+              className="icon-button"
+              title="Refresh vectors"
+              disabled={loading}
+              onClick={() => refresh(true)}
+            >
+              <RefreshCw size={16} className={loading ? "spin" : ""} />
+            </button>
+          )}
         </div>
-        <label className="search-field">
-          <Search size={16} />
-          <input
-            placeholder="Find a direction..."
-            aria-label="Search vectors"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
+        {catalogLoaded && (
+          <label className="search-field">
+            <Search size={16} />
+            <input
+              placeholder="Find a direction..."
+              aria-label="Search vectors"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        )}
         {catalogError && (
           <p className="error compact" role="alert">
             {catalogError}
           </p>
         )}
         <div className="vector-list" aria-busy={loading}>
+          {!catalogLoaded && !loading && (
+            <div className="empty-collection">
+              <Layers3 size={28} strokeWidth={1.2} />
+              <p>Load your vector collection when you're ready.</p>
+              <small>Chat is available without loading vectors.</small>
+              <button
+                className="primary-button load-vectors-button"
+                onClick={() => refresh()}
+              >
+                {catalogError ? "Retry loading vectors" : "Load vectors"}
+              </button>
+            </div>
+          )}
           {loading && (
             <div className="catalog-loading">
               <span className="skeleton" />
@@ -415,7 +433,7 @@ export function ChatStudio() {
                 </button>
               </div>
             ))}
-          {!loading && !filtered.length && (
+          {catalogLoaded && !loading && !filtered.length && (
             <div className="empty-collection">
               <Layers3 size={28} strokeWidth={1.2} />
               <p>{search ? "No matching vectors." : "A fresh collection."}</p>

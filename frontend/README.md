@@ -7,6 +7,7 @@ A Next.js App Router workspace for steering language models. Built with React 19
 Install dependencies with `npm install`. Configure the values from `.env.example` in `.env`, then run `npm run dev`.
 
 The conversation workspace is `/`; the extraction workspace is `/extract`.
+The conversation workspace loads the vector collection only when you select **Load vectors**. After extraction, use that button to load and select the newly created vectors. Unsteered chat is available without loading the collection.
 
 ## Model Services
 

@@ -408,6 +408,9 @@ summary::-webkit-details-marker {
   line-height: 1.6;
   display: block;
 }
+.load-vectors-button {
+  margin-top: 14px;
+}
 .create-link {
   display: flex;
   align-items: center;
