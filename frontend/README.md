@@ -7,7 +7,10 @@ A Next.js App Router workspace for steering language models. Built with React 19
 Install dependencies with `npm install`. Configure the values from `.env.example` in `.env`, then run `npm run dev`.
 
 The conversation workspace is `/`; the extraction workspace is `/extract`.
-The conversation workspace loads the vector collection only when you select **Load vectors**. After extraction, use that button to load and select the newly created vectors. Unsteered chat is available without loading the collection.
+The conversation workspace loads the vector collection only when you select **Load vectors**. After extraction, use that button to load and select the newly created vectors. When sending without loading the collection, choose whether to load it first or continue without loading.
+If the collection is loading when you send, you can wait or send that message without vectors.
+
+Newly selected vectors default to a strength of 1.8. Vector selections, strengths, target layers, and enabled states are saved automatically in the URL. Use **Copy mix link** to share them; the recipient must load the same vector collection to apply the mix. If vectors are missing, the link is kept so the collection can be refreshed and retried. The URL contains settings and vector IDs, not vector files or conversation history; anyone with the link can see those settings. Bookmark the link to keep the mix.
 
 ## Model Services
 

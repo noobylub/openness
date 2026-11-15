@@ -28,12 +28,15 @@ import {
   removeConversation,
   saveConversation,
 } from "@/lib/history";
+import { decodeMix, encodeMix, resolveMix } from "@/lib/shared-mix";
+import type { SharedMix } from "@/lib/shared-mix";
 
 const prompts = [
   "Describe a city that doesn't exist.",
   "Explain a complex idea simply.",
   "Write the opening of a short story.",
 ];
+const DEFAULT_COEFFICIENT = 1.8;
 export function ChatStudio() {
   const [available, setAvailable] = useState<Vector[]>([]);
   const [selections, setSelections] = useState<Selection[]>([]);
@@ -56,10 +59,18 @@ export function ChatStudio() {
   const [maxTokens, setMaxTokens] = useState(128);
   const [deleteVector, setDeleteVector] = useState<Vector | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sharedMix, setSharedMix] = useState<SharedMix | "invalid" | null>(null);
+  const [sharedError, setSharedError] = useState("");
+  const [urlReady, setUrlReady] = useState(false);
+  const [loadPrompt, setLoadPrompt] = useState<{
+    retry: boolean;
+    duringLoading: boolean;
+  } | null>(null);
   const conversationId = useRef("");
   const threadEnd = useRef<HTMLDivElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const introDialog = useRef<HTMLDialogElement>(null);
+  const loadDialog = useRef<HTMLDialogElement>(null);
   const active = selections.filter((item) => item.enabled);
   const conflicts =
     new Set(active.map((item) => item.layer)).size !== active.length;
@@ -73,6 +84,32 @@ export function ChatStudio() {
       .toLowerCase()
       .includes(deferredSearch.toLowerCase()),
   );
+  const encodedMix = encodeMix(selections);
+
+  useEffect(() => {
+    function readSharedMix() {
+      const value = new URLSearchParams(window.location.hash.slice(1)).get("mix");
+      if (value !== null) {
+        setSelections([]);
+        setSharedMix(decodeMix(value) || "invalid");
+        setSharedError("");
+      }
+      setUrlReady(true);
+    }
+    readSharedMix();
+    window.addEventListener("hashchange", readSharedMix);
+    return () => window.removeEventListener("hashchange", readSharedMix);
+  }, []);
+
+  useEffect(() => {
+    if (!urlReady || sharedMix || encodedMix === null) return;
+    const url = new URL(window.location.href);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    if (selections.length) fragment.set("mix", encodedMix);
+    else fragment.delete("mix");
+    url.hash = fragment.toString();
+    window.history.replaceState(window.history.state, "", url);
+  }, [encodedMix, selections.length, sharedMix, urlReady]);
 
   async function refresh(force = false) {
     setLoadingSeconds(0);
@@ -82,7 +119,19 @@ export function ChatStudio() {
       const catalog = await vectors(force);
       setAvailable(catalog);
       setCatalogLoaded(true);
-      if (!force) {
+      if (sharedMix && sharedMix !== "invalid") {
+        const resolved = resolveMix(sharedMix, catalog);
+        if (resolved) {
+          setSelections(resolved);
+          setSharedMix(null);
+          setSharedError("");
+          const url = new URL(window.location.href);
+          url.searchParams.delete("vectors");
+          window.history.replaceState(window.history.state, "", url);
+        } else {
+          setSharedError("Some shared vectors are missing from this collection. Refresh the collection to try again.");
+        }
+      } else if (!force && !sharedMix) {
         const ids =
           new URLSearchParams(location.search).get("vectors")?.split(",") || [];
         if (ids.length) {
@@ -98,7 +147,7 @@ export function ChatStudio() {
               vector_id: vector.vector_id,
               name: vector.name || "Untitled vector",
               layer,
-              coefficient: 1,
+              coefficient: DEFAULT_COEFFICIENT,
               enabled,
             };
           });
@@ -107,7 +156,9 @@ export function ChatStudio() {
             setNotice(
               "Vectors sharing a layer were added disabled. Choose one per layer.",
             );
-          window.history.replaceState(null, "", "/");
+          const url = new URL(window.location.href);
+          url.searchParams.delete("vectors");
+          window.history.replaceState(window.history.state, "", url);
         }
       }
     } catch (issue) {
@@ -175,6 +226,10 @@ export function ChatStudio() {
     else deleteDialog.current?.close();
   }, [deleteVector]);
   useEffect(() => {
+    if (loadPrompt !== null) loadDialog.current?.showModal();
+    else loadDialog.current?.close();
+  }, [loadPrompt]);
+  useEffect(() => {
     if (!drawer) return;
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") setDrawer(false);
@@ -200,13 +255,13 @@ export function ChatStudio() {
               vector_id: vector.vector_id,
               name: vector.name || `Vector ${vector.vector_id.slice(0, 6)}`,
               layer: vector.layer_id ?? 10,
-              coefficient: 1,
+              coefficient: DEFAULT_COEFFICIENT,
               enabled: true,
             },
           ],
     );
   }
-  async function send(retry = false) {
+  async function send(retry = false, skipLoadPrompt = false, unsteered = false) {
     if (busy) return;
     const next: Message[] = retry
       ? messages
@@ -214,9 +269,10 @@ export function ChatStudio() {
           ...messages,
           { id: crypto.randomUUID(), role: "user", content: draft.trim() },
         ];
+    const sentVectors = unsteered || (loading && !skipLoadPrompt) ? [] : active;
     const parsed = chatInput.safeParse({
       messages: next.map(({ role, content }) => ({ role, content })),
-      vectors: active.map(({ vector_id, coefficient, layer }) => ({
+      vectors: sentVectors.map(({ vector_id, coefficient, layer }) => ({
         vector_id,
         coefficient,
         layer,
@@ -230,11 +286,15 @@ export function ChatStudio() {
       );
       return;
     }
+    if ((loading || !catalogLoaded) && !skipLoadPrompt) {
+      setLoadPrompt({ retry, duringLoading: loading });
+      return;
+    }
     setBusy(true);
     setError("");
     setMessages(next);
     if (!retry) setDraft("");
-    const snapshot = active.map((item) => ({ ...item }));
+    const snapshot = sentVectors.map((item) => ({ ...item }));
     try {
       const reply = await request<{ content: string; model: string }>(
         "/api/chat",
@@ -368,6 +428,28 @@ export function ChatStudio() {
             {catalogError}
           </p>
         )}
+        {sharedMix && (
+          <div className="notice" role="status">
+            <span>
+              {sharedMix === "invalid"
+                ? "This shared mix is invalid or unsupported. Discard it to edit your mix."
+                : sharedError || (catalogLoaded
+                  ? "Shared mix ready — refresh vectors to apply, or discard it to edit your mix."
+                  : "Shared mix ready — load vectors to apply, or discard it to edit your mix.")}
+            </span>
+            <button
+              className="icon-button"
+              title="Discard shared mix"
+              disabled={loading}
+              onClick={() => {
+                setSharedMix(null);
+                setSharedError("");
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div className="vector-list" aria-busy={loading}>
           {!catalogLoaded && !loading && (
             <div className="empty-collection">
@@ -410,7 +492,7 @@ export function ChatStudio() {
                     checked={selections.some(
                       (item) => item.vector_id === vector.vector_id,
                     )}
-                    disabled={busy}
+                    disabled={busy || !!sharedMix}
                     onChange={() => toggle(vector)}
                   />
                   <span>
@@ -426,7 +508,7 @@ export function ChatStudio() {
                 <button
                   className="icon-button"
                   title={`Delete ${vector.name || "vector"}`}
-                  disabled={busy}
+                  disabled={busy || !!sharedMix}
                   onClick={() => setDeleteVector(vector)}
                 >
                   <Trash2 size={14} />
@@ -465,7 +547,7 @@ export function ChatStudio() {
                   <input
                     type="checkbox"
                     checked={selection.enabled}
-                    disabled={busy}
+                    disabled={busy || !!sharedMix}
                     onChange={(event) =>
                       updateSelection(selection.vector_id, {
                         enabled: event.target.checked,
@@ -477,7 +559,7 @@ export function ChatStudio() {
                 <button
                   className="icon-button"
                   title={`Remove ${selection.name}`}
-                  disabled={busy}
+                  disabled={busy || !!sharedMix}
                   onClick={() =>
                     setSelections((current) =>
                       current.filter(
@@ -497,7 +579,7 @@ export function ChatStudio() {
                   step={0.1}
                   aria-label={`${selection.name} strength`}
                   value={selection.coefficient}
-                  disabled={busy || !selection.enabled}
+                  disabled={busy || !!sharedMix || !selection.enabled}
                   onChange={(event) =>
                     updateSelection(selection.vector_id, {
                       coefficient: Number(event.target.value),
@@ -511,7 +593,7 @@ export function ChatStudio() {
                   step={0.1}
                   aria-label={`${selection.name} coefficient`}
                   value={selection.coefficient}
-                  disabled={busy || !selection.enabled}
+                  disabled={busy || !!sharedMix || !selection.enabled}
                   onChange={(event) =>
                     updateSelection(selection.vector_id, {
                       coefficient: event.target.valueAsNumber,
@@ -521,9 +603,9 @@ export function ChatStudio() {
                 <button
                   className="icon-button"
                   title={`Reset ${selection.name} strength`}
-                  disabled={busy}
+                  disabled={busy || !!sharedMix}
                   onClick={() =>
-                    updateSelection(selection.vector_id, { coefficient: 1 })
+                    updateSelection(selection.vector_id, { coefficient: DEFAULT_COEFFICIENT })
                   }
                 >
                   <RotateCcw size={12} />
@@ -541,7 +623,7 @@ export function ChatStudio() {
                     min={0}
                     max={255}
                     value={selection.layer}
-                    disabled={busy}
+                    disabled={busy || !!sharedMix}
                     onChange={(event) =>
                       updateSelection(selection.vector_id, {
                         layer: event.target.valueAsNumber,
@@ -561,6 +643,26 @@ export function ChatStudio() {
             {invalid}
           </p>
         )}
+        {encodedMix === null && (
+          <p className="error compact" role="alert">
+            Correct the vector settings before saving or sharing this mix.
+          </p>
+        )}
+        <button
+          className="secondary-button"
+          disabled={!urlReady || !!sharedMix || encodedMix === null}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setNotice("Mix link copied.");
+            } catch {
+              setNotice("Clipboard access is unavailable in this browser.");
+            }
+          }}
+        >
+          <Copy size={14} />
+          Copy mix link
+        </button>
         <div className="sidebar-foot">
           <span className="status-dot" />
           <span>{available[0]?.model || "Awaiting your first vector"}</span>
@@ -637,7 +739,7 @@ export function ChatStudio() {
             {history.map((item) => (
               <div className="history-row" key={item.id}>
                 <button
-                  disabled={busy}
+                  disabled={busy || !!sharedMix}
                   onClick={() => {
                     setMessages(item.messages);
                     setSelections(item.selections);
@@ -853,7 +955,7 @@ export function ChatStudio() {
                   type="submit"
                   className="send-button"
                   title="Send message"
-                  disabled={busy || !draft.trim() || !!invalid}
+                  disabled={busy || !draft.trim() || (!!invalid && !loading)}
                 >
                   <ArrowUp size={21} />
                 </button>
@@ -868,6 +970,57 @@ export function ChatStudio() {
           </div>
         </div>
       </section>
+      <dialog
+        ref={loadDialog}
+        className="confirm-dialog"
+        aria-labelledby="load-vectors-title"
+        onClose={() => setLoadPrompt(null)}
+      >
+        <span className="eyebrow">VECTOR COLLECTION</span>
+        <h2 id="load-vectors-title">
+          {loadPrompt?.duringLoading
+            ? loading
+              ? "Vectors are loading"
+              : catalogError
+                ? "Vectors could not be loaded"
+                : "Vectors finished loading"
+            : "Load vectors first?"}
+        </h2>
+        <p>
+          {loadPrompt?.duringLoading
+            ? loading
+              ? "Wait for the collection to load, or send this message without vectors."
+              : catalogError
+                ? "Review the loading error, or send this message without vectors."
+                : "Review your mix before sending, or send this message without vectors."
+            : active.length
+              ? "Load the collection to adjust your mix, or send with your current mix."
+              : "Load the collection to steer this message, or continue without steering."}
+        </p>
+        <div className="dialog-actions">
+          <button
+            className="secondary-button"
+            onClick={() => {
+              const retry = loadPrompt?.retry ?? false;
+              const unsteered = loadPrompt?.duringLoading ?? false;
+              setLoadPrompt(null);
+              void send(retry, true, unsteered);
+            }}
+          >
+            {loadPrompt?.duringLoading ? "Send without vectors" : "Continue without loading"}
+          </button>
+          <button
+            className="primary-button"
+            onClick={() => {
+              setLoadPrompt(null);
+              setDrawer(true);
+              if (!loadPrompt?.duringLoading && !loading) void refresh();
+            }}
+          >
+            {loadPrompt?.duringLoading ? (loading ? "Wait" : "Review vectors") : "Load vectors"}
+          </button>
+        </div>
+      </dialog>
       <dialog
         ref={deleteDialog}
         className="confirm-dialog"
