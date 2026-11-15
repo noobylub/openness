@@ -1091,7 +1091,23 @@ export function ChatStudio() {
           </p>
           <div className="intro-steps">
             <article>
-              <span className="eyebrow">01 / IN CHAT</span>
+              <span className="eyebrow">01 / Vector as Concepts</span>
+              <h2>Vectors representing concepts</h2>
+              <p>
+                Previous research have shown concepts can be represented as vectors in a model’s activation space.
+                When inputted into the model, these vectors influence its activations in ways that is similar to the concept it represents.
+                
+              </p>
+            </article>
+            <article>
+              <span className="eyebrow">02 / Example</span>
+              <h2>Vectors representing concepts</h2>
+              <p>
+                For example: a vector representing the concept of "anger" could influence the model to generate text with a negative and angry tone.
+              </p>
+            </article>
+            <article>
+              <span className="eyebrow">03 / IN CHAT</span>
               <h2>Try a steering vector</h2>
               <p>
                 Choose a vector in the controls, adjust its strength and target
@@ -1100,7 +1116,7 @@ export function ChatStudio() {
               </p>
             </article>
             <article>
-              <span className="eyebrow">02 / MAKE YOUR OWN</span>
+              <span className="eyebrow">04 / MAKE YOUR OWN</span>
               <h2>Set a new direction</h2>
               <p>
                 In Extraction, add examples to lean into and examples to move
