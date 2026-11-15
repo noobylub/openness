@@ -33,8 +33,8 @@ import type { SharedMix } from "@/lib/shared-mix";
 
 const prompts = [
   "Describe a city that doesn't exist.",
-  "Explain a complex idea simply.",
-  "Write the opening of a short story.",
+  "Write a poem.",
+  "Write the opening of a short story about a couple.",
 ];
 const DEFAULT_COEFFICIENT = 1.8;
 export function ChatStudio() {
